@@ -48,6 +48,13 @@ final class CopilotClient: ObservableObject {
 
     private init() {
         self.isAuthenticated = (KeychainHelper.shared.getToken() != nil)
+        
+        // If already authenticated, fetch usage immediately on app startup
+        if self.isAuthenticated {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.fetchUsage()
+            }
+        }
     }
 
     func resetAuthFlow() {

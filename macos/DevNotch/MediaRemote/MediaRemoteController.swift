@@ -8,6 +8,7 @@
 import Foundation
 import AppKit
 import SwiftUI
+import os
 
 // MediaRemote framework imports (private framework)
 @objc protocol MediaRemoteProtocol {
@@ -38,10 +39,19 @@ class MediaRemoteController: ObservableObject {
     
     init() {
         setupNotificationObserver()
-        fetchNowPlayingInfo()
+        
+        // Safely fetch now playing info
+        do {
+            fetchNowPlayingInfo()
+        } catch {
+            os_log("Error fetching initial now playing info: %{public}@", log: OSLog.default, type: .error, error.localizedDescription)
+        }
+        
         // Poll every 2 seconds to ensure sync
-        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            self?.fetchNowPlayingInfo()
+        DispatchQueue.main.async { [weak self] in
+            self?.timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+                self?.fetchNowPlayingInfo()
+            }
         }
     }
     
@@ -98,56 +108,70 @@ class MediaRemoteController: ObservableObject {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            var error: NSDictionary?
-            if let scriptObject = NSAppleScript(source: script) {
+            
+            do {
+                var error: NSDictionary?
+                guard let scriptObject = NSAppleScript(source: script) else {
+                    os_log("Failed to create AppleScript object", log: OSLog.default, type: .debug)
+                    return
+                }
+                
                 let output = scriptObject.executeAndReturnError(&error)
                 
                 DispatchQueue.main.async {
-                    if error == nil, let result = output.stringValue, result != "not_playing" {
-                        let components = result.components(separatedBy: "|||")
-                        if components.count >= 5 {
-                            let trackID = "\(components[1])-\(components[2])"
-                            var currentArtwork = self.nowPlayingInfo?.artworkData
-                            let isPlaying = (components[4] == "playing")
-                            
-                            // Check if track changed to fetch new artwork
-                            if trackID != self.lastTrackID {
-                                self.lastTrackID = trackID
-                                currentArtwork = nil // Reset while fetching
-                                self.fetchArtwork(appName: components[0])
-                            }
-                            
-                            // Create info with existing artwork (will be updated by fetchArtwork completion)
-                            // We don't overwrite if we are just polling playback state
-                            if self.nowPlayingInfo?.trackName == components[1] {
-                                currentArtwork = self.nowPlayingInfo?.artworkData
-                            }
-                            
-                            let info = NowPlayingInfo(
-                                trackName: components[1],
-                                artistName: components[2],
-                                albumName: components[3],
-                                isPlaying: isPlaying,
-                                appName: components[0],
-                                artworkData: currentArtwork
-                            )
-                            
-                            // Prevent unnecessary UI updates/flickers
-                            if self.nowPlayingInfo != info {
-                                withAnimation {
-                                    self.nowPlayingInfo = info
-                                }
-                            }
-                        }
-                    } else {
+                    // Log any errors for debugging
+                    if let error = error {
+                        os_log("AppleScript error in fetchNowPlayingInfo: %{public}@", log: OSLog.default, type: .error, String(describing: error))
+                    }
+                    
+                    guard error == nil, let result = output.stringValue, result != "not_playing" else {
                         if self.nowPlayingInfo != nil {
                             withAnimation {
                                 self.nowPlayingInfo = nil
                             }
                         }
                         self.lastTrackID = ""
+                        return
+                    }
+                    
+                    let components = result.components(separatedBy: "|||")
+                    guard components.count >= 5 else { return }
+                    
+                    let trackID = "\(components[1])-\(components[2])"
+                    var currentArtwork = self.nowPlayingInfo?.artworkData
+                    let isPlaying = (components[4] == "playing")
+                    
+                    // Check if track changed to fetch new artwork
+                    if trackID != self.lastTrackID {
+                        self.lastTrackID = trackID
+                        currentArtwork = nil // Reset while fetching
+                        self.fetchArtwork(appName: components[0])
+                    }
+                    
+                    // Create info with existing artwork (will be updated by fetchArtwork completion)
+                    // We don't overwrite if we are just polling playback state
+                    if self.nowPlayingInfo?.trackName == components[1] {
+                        currentArtwork = self.nowPlayingInfo?.artworkData
+                    }
+                    
+                    let info = NowPlayingInfo(
+                        trackName: components[1],
+                        artistName: components[2],
+                        albumName: components[3],
+                        isPlaying: isPlaying,
+                        appName: components[0],
+                        artworkData: currentArtwork
+                    )
+                    
+                    // Prevent unnecessary UI updates/flickers
+                    if self.nowPlayingInfo != info {
+                        withAnimation {
+                            self.nowPlayingInfo = info
+                        }
                     }
                 }
+            } catch {
+                os_log("Exception in fetchNowPlayingInfo: %{public}@", log: OSLog.default, type: .error, error.localizedDescription)
             }
         }
     }

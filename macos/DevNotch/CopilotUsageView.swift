@@ -71,6 +71,6 @@ struct CopilotUsageView_Previews: PreviewProvider {
     static var previews: some View {
         CopilotUsageView()
             .frame(width: 360)
-            .background(Color.black.opacity(0.85))
+            .background(Color.black)
     }
 }

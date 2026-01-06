@@ -15,7 +15,10 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "DevNotch",
-            path: "DevNotch"
+            path: "DevNotch",
+            resources: [
+                .process("Assets.xcassets")
+            ]
         )
     ]
 )

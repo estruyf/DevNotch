@@ -86,6 +86,6 @@ struct NowPlayingView_Previews: PreviewProvider {
     static var previews: some View {
         NowPlayingView()
             .frame(width: 360, height: 64)
-            .background(Color.black.opacity(0.85))
+            .background(Color.black)
     }
 }

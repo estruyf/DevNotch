@@ -27,7 +27,7 @@ struct NotchContentView: View {
     private let expandedWidth: CGFloat = 500
     @State private var manualToken: String = ""
     private var expandedHeight: CGFloat {
-        return 200
+        return 200 + compactHeight
     }
     
     // ... rest of state
@@ -57,7 +57,7 @@ struct NotchContentView: View {
                     VStack(spacing: 12) {
                         NowPlayingView()
                             .frame(height: 64)
-                            .padding(.top, 8)
+                            .padding(.top, compactHeight + 8)
                         Divider()
                             .background(Color.black.opacity(0.1))
                             .padding(.bottom, 12)

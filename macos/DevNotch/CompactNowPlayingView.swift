@@ -13,7 +13,7 @@ struct CompactNowPlayingView: View {
     
     var body: some View {
         HStack(spacing: 8) {
-            // Left side: artwork + track if playing
+            // Left side: artwork + track if playing, Copilot icon if paused
             if let info = controller.nowPlayingInfo, info.isPlaying {
                 if let data = info.artworkData, let nsImage = NSImage(data: data) {
                     Image(nsImage: nsImage)
@@ -37,8 +37,21 @@ struct CompactNowPlayingView: View {
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .truncationMode(.tail)
+            } else if controller.nowPlayingInfo != nil && !controller.nowPlayingInfo!.isPlaying {
+                // Music paused: show Copilot icon
+                if let iconImage = loadCopilotIcon() {
+                    Image(nsImage: iconImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 18, height: 18)
+                } else {
+                    Image(systemName: "chevron.left.forwardslash.chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 18, height: 18)
+                }
             } else {
-                // Not playing: reserve minimal left space for consistent layout
+                // No music: reserve minimal left space for consistent layout
                 Rectangle()
                     .fill(Color.clear)
                     .frame(width: 18, height: 18)
@@ -46,11 +59,17 @@ struct CompactNowPlayingView: View {
 
             Spacer()
 
-            // If music is playing show waveform with dynamic color based on Copilot usage
+            // If music is playing show waveform, if paused show usage dot
             if let info = controller.nowPlayingInfo, info.isPlaying {
                 let waveColor = waveformColor(for: copilot.usagePercentage)
                 WaveformView(color: waveColor)
                     .frame(width: 20, height: 12)
+            } else if controller.nowPlayingInfo != nil && !controller.nowPlayingInfo!.isPlaying {
+                // Music paused: show usage state dot
+                let dotColor = waveformColor(for: copilot.usagePercentage)
+                Circle()
+                    .fill(dotColor)
+                    .frame(width: 8, height: 8)
             }
         }
         .padding(.horizontal, 12)
@@ -68,6 +87,24 @@ struct CompactNowPlayingView: View {
         } else {
             return Color.red
         }
+    }
+    
+    // Load Copilot icon from bundle resources
+    private func loadCopilotIcon() -> NSImage? {
+        // Try multiple paths
+        let paths = [
+            "/Users/eliostruyf/Developer/nodejs/DevNotch/assets/32x32.png",
+            Bundle.main.resourcePath.map { "\($0)/32x32.png" },
+            Bundle.main.resourcePath.map { "\($0)/Assets.xcassets/CopilotIcon.imageset/copilot-32.png" }
+        ].compactMap { $0 }
+        
+        for path in paths {
+            if let image = NSImage(contentsOfFile: path) {
+                return image
+            }
+        }
+        
+        return nil
     }
 }
 
@@ -107,6 +144,6 @@ struct CompactNowPlayingView_Previews: PreviewProvider {
     static var previews: some View {
         CompactNowPlayingView()
             .frame(width: 220, height: 32)
-            .background(Color.black.opacity(0.85))
+            .background(Color.black)
     }
 }

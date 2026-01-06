@@ -12,25 +12,14 @@ class NotchWindow: NSPanel {
     private var hostingView: NSHostingView<NotchContentView>?
     private var isExpanded = false
     private var currentScreen: NSScreen?
-    private var screenCheckTimer: Timer?
+    private var globalMouseMonitor: Any?
     
     private var compactHeight: CGFloat {
-        guard let screen = activeScreen else { return 32 }
+        guard let screen = currentScreen ?? NSScreen.main else { return 32 }
         return screen.frame.height - screen.visibleFrame.maxY
     }
     private let compactWidth: CGFloat = 220
     private let expandedHeight: CGFloat = 300 // Max allowed
-    
-    // Get the currently active screen (the one with the mouse cursor)
-    private var activeScreen: NSScreen? {
-        // Get the screen containing the mouse cursor
-        let mouseLocation = NSEvent.mouseLocation
-        if let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) {
-            return screen
-        }
-        // Fallback to main screen
-        return NSScreen.main
-    }
     
     init() {
         // Calculate position at top center of screen
@@ -73,7 +62,7 @@ class NotchWindow: NSPanel {
         
         setupContentView()
         setupGlobalClickMonitor()
-        setupScreenTracking()
+        setupGlobalMouseClickTracking()
     }
     
     override var canBecomeKey: Bool {
@@ -95,7 +84,7 @@ class NotchWindow: NSPanel {
         self.hostingView = hostingView
     }
     
-    private func setupScreenTracking() {
+    private func setupGlobalMouseClickTracking() {
         // Monitor for screen parameter changes (resolution, arrangement, etc.)
         NotificationCenter.default.addObserver(
             self,
@@ -104,29 +93,40 @@ class NotchWindow: NSPanel {
             object: nil
         )
         
-        // Check for screen changes every 0.5 seconds (when mouse moves to different screen)
-        screenCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-            self?.checkAndUpdateScreen()
+        // Monitor global mouse clicks to detect when user clicks on a different screen
+        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            self?.handleGlobalMouseClick(event)
+        }
+        
+        // Also monitor local clicks (clicks on our own window)
+        NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            self?.handleGlobalMouseClick(event)
+            return event
         }
     }
     
-    @objc private func screenParametersChanged() {
-        // Screen configuration changed, update position
-        updateWindowPosition()
-    }
-    
-    private func checkAndUpdateScreen() {
-        guard let newScreen = activeScreen else { return }
+    private func handleGlobalMouseClick(_ event: NSEvent) {
+        let clickLocation = NSEvent.mouseLocation
         
-        // Only update if we've moved to a different screen
-        if currentScreen != newScreen {
-            currentScreen = newScreen
+        // Find which screen the click occurred on
+        guard let clickedScreen = NSScreen.screens.first(where: { $0.frame.contains(clickLocation) }) else {
+            return
+        }
+        
+        // Only update if we've clicked on a different screen
+        if currentScreen != clickedScreen {
+            currentScreen = clickedScreen
             updateWindowPosition()
         }
     }
     
+    @objc private func screenParametersChanged() {
+        // Screen configuration changed, update position on current screen
+        updateWindowPosition()
+    }
+    
     private func updateWindowPosition() {
-        guard let screen = currentScreen ?? activeScreen else { return }
+        guard let screen = currentScreen ?? NSScreen.main else { return }
         let screenFrame = screen.frame
         
         if isExpanded {
@@ -143,7 +143,7 @@ class NotchWindow: NSPanel {
             self.setFrame(largeFrame, display: true, animate: true)
         } else {
             // Update compact position
-            let compactH = self.compactHeight
+            let compactH = screen.frame.height - screen.visibleFrame.maxY
             let compactW: CGFloat = 370
             let xPos = screenFrame.minX + (screenFrame.width - compactW) / 2
             let compactFrame = NSRect(
@@ -175,7 +175,9 @@ class NotchWindow: NSPanel {
         if let monitor = globalClickMonitor {
             NSEvent.removeMonitor(monitor)
         }
-        screenCheckTimer?.invalidate()
+        if let monitor = globalMouseMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
         NotificationCenter.default.removeObserver(self)
     }
 
@@ -188,7 +190,7 @@ class NotchWindow: NSPanel {
         guard isExpanded != expanded else { return }
         isExpanded = expanded
         
-        guard let screen = currentScreen ?? activeScreen else { return }
+        guard let screen = currentScreen ?? NSScreen.main else { return }
         let screenFrame = screen.frame
         
         if expanded {
@@ -224,7 +226,7 @@ class NotchWindow: NSPanel {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
                 guard let self = self, !self.isExpanded else { return }
                 
-                let compactH = self.compactHeight
+                let compactH = screen.frame.height - screen.visibleFrame.maxY
                 // Width must account for visual rounded corners (220 content + 10 radius * 2 = 240)
                 let compactW: CGFloat = 370
                 let xPos = screenFrame.minX + (screenFrame.width - compactW) / 2

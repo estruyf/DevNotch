@@ -27,7 +27,7 @@ struct NotchContentView: View {
     private let expandedWidth: CGFloat = 500
     @State private var manualToken: String = ""
     private var expandedHeight: CGFloat {
-        return 150
+        return 200
     }
     
     // ... rest of state
@@ -54,13 +54,13 @@ struct NotchContentView: View {
              VStack(spacing: 0) {
                 if isExpanded {
                     // Expanded Content
-                    VStack(spacing: 0) {
+                    VStack(spacing: 12) {
                         NowPlayingView()
                             .frame(height: 64)
                             .padding(.top, 8)
                         Divider()
                             .background(Color.black.opacity(0.1))
-                            .padding(.vertical, 8)
+                            .padding(.bottom, 12)
                         CopilotUsageView()
                             .frame(height: 40)
                             .padding(.vertical, 12)

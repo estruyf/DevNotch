@@ -33,7 +33,7 @@ struct CompactNowPlayingView: View {
                 }
 
                 Text("\(info.artistName) - \(info.trackName)")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .truncationMode(.tail)

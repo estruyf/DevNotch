@@ -16,7 +16,7 @@ struct CopilotUsageView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Copilot")
+                Text("GitHub Copilot Usage")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
                 Spacer()
@@ -54,6 +54,7 @@ struct CopilotUsageView: View {
                 }
                 Spacer()
             }
+            .padding(.bottom, 8)
         }
         .padding(.horizontal, 12)
         .onAppear {

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "build:mac": "cd macos && xcodebuild -scheme DevNotch -configuration Debug -destination 'generic/platform=macOS' -derivedDataPath .build",
+    "build:mac": "cd macos && xcodebuild -scheme DevNotch -configuration Release -destination 'generic/platform=macOS' -derivedDataPath .build",
     "build:dmg": "npm run build:mac && bash scripts/create-dmg.sh",
     "open:xcode": "cd macos && xed ."
   }

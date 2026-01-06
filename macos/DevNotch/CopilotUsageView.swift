@@ -12,6 +12,7 @@ struct CopilotUsageView: View {
 
     @ObservedObject private var client = CopilotClient.shared
     @Binding var showDeviceInfo: Bool
+    @State private var isHovering = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -44,11 +45,15 @@ struct CopilotUsageView: View {
 
             HStack(spacing: 8) {
                 if client.isAuthenticated {
-                    Button("Refresh") { client.fetchUsage() }
-                    Button("Sign out") { client.signOut() }
+                    HoverButton(icon: "arrow.clockwise", iconColor: .white) {
+                        client.fetchUsage()
+                    }
+                    
+                    HoverButton(icon: "power", iconColor: .white) {
+                        client.signOut()
+                    }
                 } else {
-                    Button("Sign in") {
-                        // Just show the overlay, don't start flow yet
+                    HoverButton(icon: "key.fill", iconColor: .yellow) {
                         showDeviceInfo = true
                     }
                 }

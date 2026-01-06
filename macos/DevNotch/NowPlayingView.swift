@@ -9,6 +9,7 @@ import SwiftUI
 
 struct NowPlayingView: View {
     @ObservedObject private var controller = MediaRemoteController.shared
+    @State private var isHovering = false
     
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -58,23 +59,20 @@ struct NowPlayingView: View {
             // Controls
             if controller.nowPlayingInfo != nil {
                 HStack(spacing: 8) {
-                    Button(action: { controller.previousTrack() }) {
-                        Image(systemName: "backward.fill")
-                            .foregroundColor(.white)
+                    HoverButton(icon: "backward.fill", iconColor: .white) {
+                        controller.previousTrack()
                     }
-                    Button(action: {
+
+                    HoverButton(icon: controller.nowPlayingInfo?.isPlaying == true ? "pause.fill" : "play.fill", iconColor: .white) {
                         if controller.nowPlayingInfo?.isPlaying == true {
                             controller.pause()
                         } else {
                             controller.play()
                         }
-                    }) {
-                        Image(systemName: controller.nowPlayingInfo?.isPlaying == true ? "pause.fill" : "play.fill")
-                            .foregroundColor(.white)
                     }
-                    Button(action: { controller.nextTrack() }) {
-                        Image(systemName: "forward.fill")
-                            .foregroundColor(.white)
+
+                    HoverButton(icon: "forward.fill", iconColor: .white) {
+                        controller.nextTrack()
                     }
                 }
             }

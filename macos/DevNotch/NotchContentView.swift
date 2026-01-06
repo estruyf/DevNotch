@@ -27,7 +27,7 @@ struct NotchContentView: View {
     private let expandedWidth: CGFloat = 500
     @State private var manualToken: String = ""
     private var expandedHeight: CGFloat {
-        if showCopilotAuth { return 348 }
+        if showCopilotAuth { return 400 }
         return 150
     }
     
@@ -69,7 +69,7 @@ struct NotchContentView: View {
                                 .padding(.vertical, 8)
                             CopilotUsageView(showDeviceInfo: $showCopilotAuth)
                                 .frame(height: 40)
-                                .padding(.vertical, 8)
+                                .padding(.vertical, 12)
                         }
                         .padding(.horizontal, 16)
                         // Fade in content

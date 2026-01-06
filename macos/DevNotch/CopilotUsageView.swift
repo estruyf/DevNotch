@@ -11,7 +11,6 @@ struct CopilotUsageView: View {
     @State private var percentage: Double = 0.0
 
     @ObservedObject private var client = CopilotClient.shared
-    @Binding var showDeviceInfo: Bool
     @State private var isHovering = false
 
     var body: some View {
@@ -53,8 +52,8 @@ struct CopilotUsageView: View {
                         client.signOut()
                     }
                 } else {
-                    HoverButton(icon: "key.fill", iconColor: .yellow) {
-                        showDeviceInfo = true
+                    HoverButton(icon: "gearshape.fill", iconColor: .white) {
+                        SettingsWindow.show()
                     }
                 }
                 Spacer()
@@ -70,7 +69,7 @@ struct CopilotUsageView: View {
 
 struct CopilotUsageView_Previews: PreviewProvider {
     static var previews: some View {
-        CopilotUsageView(showDeviceInfo: .constant(false))
+        CopilotUsageView()
             .frame(width: 360)
             .background(Color.black.opacity(0.85))
     }

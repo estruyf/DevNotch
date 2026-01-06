@@ -27,14 +27,12 @@ struct NotchContentView: View {
     private let expandedWidth: CGFloat = 500
     @State private var manualToken: String = ""
     private var expandedHeight: CGFloat {
-        if showCopilotAuth { return 400 }
         return 150
     }
     
     // ... rest of state
     @State private var hoverTimer: Timer?
     @State private var isHovering = false
-    @State private var showCopilotAuth = false
     @ObservedObject private var copilotClient = CopilotClient.shared
     
     // Aesthetic constants
@@ -55,29 +53,24 @@ struct NotchContentView: View {
             // The Content
              VStack(spacing: 0) {
                 if isExpanded {
-                    if showCopilotAuth {
-                        deviceInfoOverlay
-                            .transition(.opacity)
-                    } else {
-                        // Expanded Content
-                        VStack(spacing: 0) {
-                            NowPlayingView()
-                                .frame(height: 64)
-                                .padding(.top, 8)
-                            Divider()
-                                .background(Color.black.opacity(0.1))
-                                .padding(.vertical, 8)
-                            CopilotUsageView(showDeviceInfo: $showCopilotAuth)
-                                .frame(height: 40)
-                                .padding(.vertical, 12)
-                        }
-                        .padding(.horizontal, 16)
-                        // Fade in content
-                        .transition(
-                            .scale(scale: 0.9, anchor: .top)
-                            .combined(with: .opacity)
-                        )
+                    // Expanded Content
+                    VStack(spacing: 0) {
+                        NowPlayingView()
+                            .frame(height: 64)
+                            .padding(.top, 8)
+                        Divider()
+                            .background(Color.black.opacity(0.1))
+                            .padding(.vertical, 8)
+                        CopilotUsageView()
+                            .frame(height: 40)
+                            .padding(.vertical, 12)
                     }
+                    .padding(.horizontal, 16)
+                    // Fade in content
+                    .transition(
+                        .scale(scale: 0.9, anchor: .top)
+                        .combined(with: .opacity)
+                    )
                 } else {
                     // Compact Content
                     CompactNowPlayingView()
@@ -302,7 +295,6 @@ struct NotchContentView: View {
                 Button(action: {
                     if !manualToken.isEmpty {
                         copilotClient.manualTokenAuth(manualToken)
-                        showCopilotAuth = false
                         manualToken = ""
                     }
                 }) {
@@ -314,16 +306,6 @@ struct NotchContentView: View {
                 }
                 .buttonStyle(.plain)
             }
-            
-            Button("Cancel") {
-                withAnimation {
-                    showCopilotAuth = false
-                    copilotClient.resetAuthFlow()
-                }
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
-            .foregroundColor(.gray)
         }
         .padding()
         .frame(width: expandedWidth, height: expandedHeight)

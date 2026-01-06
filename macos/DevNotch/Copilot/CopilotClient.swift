@@ -28,6 +28,7 @@ final class CopilotClient: ObservableObject {
     @Published var lastError: String? = nil
     @Published var copilotRemaining: Int? = nil
     @Published var copilotTotal: Int? = nil
+    @Published var username: String? = nil
 
     var token: String? {
         get { KeychainHelper.shared.getToken() }
@@ -193,6 +194,10 @@ final class CopilotClient: ObservableObject {
     func signOut() {
         token = nil
         usagePercentage = nil
+        username = nil
+        copilotRemaining = nil
+        copilotTotal = nil
+        resetAuthFlow()
     }
 
     // Fetch Copilot usage - placeholder implementation
@@ -214,6 +219,11 @@ final class CopilotClient: ObservableObject {
             }
             // Logic to parse usage would go here. For now we just confirm the fetch succeeded
             if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                     
+                     // Extract username if available
+                     if let login = json["login"] as? String {
+                         self.username = login
+                     }
                  DispatchQueue.main.async {
                      // Check quota_snapshots -> premium_interactions
                      if let snapshots = json["quota_snapshots"] as? [String: Any],

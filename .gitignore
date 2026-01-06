@@ -1,4 +1,4 @@
 node_modules
-macos/.build
-macos/.swiftpm
+macos/.build/*
+macos/.swiftpm/*
 dist

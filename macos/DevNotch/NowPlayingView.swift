@@ -20,7 +20,10 @@ struct NowPlayingView: View {
                     .frame(width: 48, height: 48)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-            } else {
+                    .onTapGesture {
+                        controller.openMusicApp()
+                    }
+            } else if controller.nowPlayingInfo != nil {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Color.white.opacity(0.1))
                     .frame(width: 48, height: 48)
@@ -47,34 +50,32 @@ struct NowPlayingView: View {
                         .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.5))
                         .lineLimit(1)
-                } else {
-                    Text("Not playing")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white.opacity(0.9))
                 }
             }
             
             Spacer()
             
-            // Re-adding controls if needed, but styling was good.
-            HStack(spacing: 8) {
-                Button(action: { controller.previousTrack() }) {
-                    Image(systemName: "backward.fill")
-                        .foregroundColor(.white)
-                }
-                Button(action: {
-                    if controller.nowPlayingInfo?.isPlaying == true {
-                        controller.pause()
-                    } else {
-                        controller.play()
+            // Controls
+            if controller.nowPlayingInfo != nil {
+                HStack(spacing: 8) {
+                    Button(action: { controller.previousTrack() }) {
+                        Image(systemName: "backward.fill")
+                            .foregroundColor(.white)
                     }
-                }) {
-                    Image(systemName: controller.nowPlayingInfo?.isPlaying == true ? "pause.fill" : "play.fill")
-                        .foregroundColor(.white)
-                }
-                Button(action: { controller.nextTrack() }) {
-                    Image(systemName: "forward.fill")
-                        .foregroundColor(.white)
+                    Button(action: {
+                        if controller.nowPlayingInfo?.isPlaying == true {
+                            controller.pause()
+                        } else {
+                            controller.play()
+                        }
+                    }) {
+                        Image(systemName: controller.nowPlayingInfo?.isPlaying == true ? "pause.fill" : "play.fill")
+                            .foregroundColor(.white)
+                    }
+                    Button(action: { controller.nextTrack() }) {
+                        Image(systemName: "forward.fill")
+                            .foregroundColor(.white)
+                    }
                 }
             }
         }

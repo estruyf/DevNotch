@@ -9,56 +9,65 @@ import SwiftUI
 
 struct CompactNowPlayingView: View {
     @ObservedObject private var controller = MediaRemoteController.shared
+    @ObservedObject private var copilot = CopilotClient.shared
     
     var body: some View {
         HStack(spacing: 8) {
-            // Artwork
-            if let data = controller.nowPlayingInfo?.artworkData, let nsImage = NSImage(data: data) {
-                 Image(nsImage: nsImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 18, height: 18) // Smaller as requested
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-            } else if controller.nowPlayingInfo != nil {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.white.opacity(0.1))
-                    .frame(width: 18, height: 18)
-                    .overlay(
-                        Image(systemName: "music.note")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white.opacity(0.5))
-                    )
-            } else {
-                Image(systemName: "music.note")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 14, height: 14)
-                    .foregroundColor(.white.opacity(0.5))
-            }
+            // Left side: artwork + track if playing
+            if let info = controller.nowPlayingInfo, info.isPlaying {
+                if let data = info.artworkData, let nsImage = NSImage(data: data) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 18, height: 18)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                } else {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.1))
+                        .frame(width: 18, height: 18)
+                        .overlay(
+                            Image(systemName: "music.note")
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.5))
+                        )
+                }
 
-            if let info = controller.nowPlayingInfo {
-                // Combined Artist - Track
                 Text("\(info.artistName) - \(info.trackName)")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.white)
                     .lineLimit(1)
                     .truncationMode(.tail)
             } else {
-                Text("Not playing")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white.opacity(0.7))
+                // Not playing: reserve minimal left space for consistent layout
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: 18, height: 18)
             }
 
             Spacer()
 
-            // Animated Sound Bar
-            if controller.nowPlayingInfo?.isPlaying == true {
-                WaveformView(color: Color.orange)
+            // If music is playing show waveform with dynamic color based on Copilot usage
+            if let info = controller.nowPlayingInfo, info.isPlaying {
+                let waveColor = waveformColor(for: copilot.usagePercentage)
+                WaveformView(color: waveColor)
                     .frame(width: 20, height: 12)
             }
         }
         .padding(.horizontal, 12)
         .frame(maxHeight: .infinity)
+    }
+    
+    // Determine waveform color based on Copilot usage percentage
+    private func waveformColor(for percentage: Double?) -> Color {
+        guard let p = percentage else { return Color.orange }
+        // Green when high remaining (>60%), yellow when medium (20-60%), red when low (<20%)
+        if p > 0.6 {
+            return Color.green
+        } else if p > 0.2 {
+            return Color.yellow
+        } else {
+            return Color.red
+        }
     }
 }
 

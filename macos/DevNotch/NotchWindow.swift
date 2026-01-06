@@ -28,12 +28,14 @@ class NotchWindow: NSPanel {
         // Start with COMPACT size to allow clicks-through initially
         let screenFrame = screen.frame
         let currentCompactHeight = screen.frame.height - screen.visibleFrame.maxY
-        let xPosition = screenFrame.minX + (screenFrame.width - compactWidth) / 2
+        // Width must account for visual rounded corners (220 content + 10 radius * 2 = 240)
+        let visualCompactWidth: CGFloat = 240
+        let xPosition = screenFrame.minX + (screenFrame.width - visualCompactWidth) / 2
         
         let initialRect = NSRect(
             x: xPosition,
             y: screenFrame.maxY - currentCompactHeight,
-            width: compactWidth,
+            width: visualCompactWidth,
             height: currentCompactHeight
         )
         
@@ -49,13 +51,17 @@ class NotchWindow: NSPanel {
         self.isOpaque = false
         self.backgroundColor = .clear
         self.hasShadow = false
-        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        self.collectionBehavior = [.canJoinAllSpaces, .stationary, .transient]
         self.isMovable = false
         self.isReleasedWhenClosed = false
         self.ignoresMouseEvents = false
         
         setupContentView()
         setupGlobalClickMonitor()
+    }
+    
+    override var canBecomeKey: Bool {
+        return true
     }
     
     private func setupContentView() {
@@ -65,7 +71,7 @@ class NotchWindow: NSPanel {
             }
         )
         
-        let hostingView = NSHostingView(rootView: contentView)
+        let hostingView = NotchHostingView(rootView: contentView)
         hostingView.frame = self.contentView?.bounds ?? .zero
         hostingView.autoresizingMask = [.width, .height]
         
@@ -119,7 +125,7 @@ class NotchWindow: NSPanel {
         if expanded {
             // MAXIMIZE WINDOW INSTANTLY
             // Center large frame
-            let maxWidth: CGFloat = 500
+            let maxWidth: CGFloat = 600
             let maxHeight: CGFloat = 300
             let xPosition = screenFrame.minX + (screenFrame.width - maxWidth) / 2
             let largeFrame = NSRect(
@@ -150,7 +156,8 @@ class NotchWindow: NSPanel {
                 guard let self = self, !self.isExpanded else { return }
                 
                 let compactH = self.compactHeight
-                let compactW: CGFloat = 220
+                // Width must account for visual rounded corners (220 content + 10 radius * 2 = 240)
+                let compactW: CGFloat = 370
                 let xPos = screenFrame.minX + (screenFrame.width - compactW) / 2
                 let compactFrame = NSRect(
                     x: xPos,
@@ -161,5 +168,11 @@ class NotchWindow: NSPanel {
                 self.setFrame(compactFrame, display: true)
             }
         }
+    }
+}
+
+class NotchHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+        return true
     }
 }

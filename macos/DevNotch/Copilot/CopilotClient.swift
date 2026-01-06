@@ -26,8 +26,10 @@ final class CopilotClient: ObservableObject {
     // Usage
     @Published var usagePercentage: Double? = nil
     @Published var lastError: String? = nil
+    @Published var copilotRemaining: Int? = nil
+    @Published var copilotTotal: Int? = nil
 
-    private var token: String? {
+    var token: String? {
         get { KeychainHelper.shared.getToken() }
         set {
             if let v = newValue { KeychainHelper.shared.saveToken(v) }
@@ -40,18 +42,34 @@ final class CopilotClient: ObservableObject {
 
     private var pollingCancellable: AnyCancellable?
 
-    // Configure this with your OAuth client id (GitHub app). The client id is read from Info.plist key `CopilotClientID`.
     private var clientId: String {
-        if let id = Bundle.main.object(forInfoDictionaryKey: "CopilotClientID") as? String {
-            return id
-        }
-        return ""
+        return "Iv1.b507a08c87ecfe98"
     }
 
     private init() {
         self.isAuthenticated = (KeychainHelper.shared.getToken() != nil)
     }
 
+    func resetAuthFlow() {
+        self.polling = false
+        self.pollingCancellable?.cancel()
+        self.pollingCancellable = nil
+        self.deviceCode = nil
+        self.userCode = nil
+        self.verificationUri = nil
+        self.expiresAt = nil
+        self.lastError = nil
+    }
+    
+    func manualTokenAuth(_ manualToken: String) {
+        // Basic validation or sanitization
+        let cleaned = manualToken.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleaned.isEmpty {
+            self.token = cleaned
+            self.fetchUsage()
+        }
+    }
+    
     // Starts device flow
     func startDeviceFlow() {
         guard !clientId.isEmpty else {
@@ -63,7 +81,8 @@ final class CopilotClient: ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        let body = "client_id=\(clientId)"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let body = "client_id=\(clientId)&scope=read:email"
         request.httpBody = body.data(using: .utf8)
 
         polling = false
@@ -88,27 +107,29 @@ final class CopilotClient: ObservableObject {
                 if let expiresIn = json["expires_in"] as? Double {
                     self.expiresAt = Date().addingTimeInterval(expiresIn)
                 }
+                
+                let interval = json["interval"] as? Double ?? 5.0
                 // Begin polling
-                self.pollForToken()
+                self.pollForToken(interval: interval)
             }
         }.resume()
     }
 
-    private func pollForToken() {
+    private func pollForToken(interval: Double) {
         guard let deviceCode = deviceCode, !clientId.isEmpty else { return }
         polling = true
         lastError = nil
 
-        // Poll every 5 seconds (or use interval from response if present)
-        pollingCancellable = Timer.publish(every: 5.0, on: .main, in: .common)
+        // Poll using the intervals
+        pollingCancellable = Timer.publish(every: interval, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
                 guard let self = self else { return }
-                self.pollOnce(deviceCode: deviceCode)
+                self.pollOnce(deviceCode: deviceCode, currentInterval: interval)
             }
     }
 
-    private func pollOnce(deviceCode: String) {
+    private func pollOnce(deviceCode: String, currentInterval: Double) {
         let url = URL(string: "https://github.com/login/oauth/access_token")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -145,7 +166,11 @@ final class CopilotClient: ObservableObject {
                 if errorDesc == "authorization_pending" {
                     // continue
                 } else if errorDesc == "slow_down" {
-                    // could increase polling interval
+                    // Increase polling interval by 5 seconds
+                    DispatchQueue.main.async {
+                        self.pollingCancellable?.cancel()
+                        self.pollForToken(interval: currentInterval + 5.0)
+                    }
                 } else {
                     DispatchQueue.main.async {
                         self.lastError = errorDesc
@@ -166,10 +191,13 @@ final class CopilotClient: ObservableObject {
     // Fetch Copilot usage - placeholder implementation
     func fetchUsage() {
         guard let token = token else { return }
-        // Replace the URL below with the correct Copilot usage endpoint you want to query.
-        guard let url = URL(string: "https://api.github.com/user") else { return }
+        // Use the Copilot internal endpoint for usage data
+        guard let url = URL(string: "https://api.github.com/copilot_internal/user") else { return }
         var request = URLRequest(url: url)
-        request.setValue("token \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("GitHub-Copilot-Usage-Tray", forHTTPHeaderField: "User-Agent")
+        request.setValue("2025-05-01", forHTTPHeaderField: "X-GitHub-Api-Version")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
             guard let self = self else { return }
@@ -177,9 +205,48 @@ final class CopilotClient: ObservableObject {
                 DispatchQueue.main.async { self.lastError = error.localizedDescription }
                 return
             }
-            // Demo fetch: just set a dummy percentage for now
-            DispatchQueue.main.async {
-                self.usagePercentage = 0.35
+            // Logic to parse usage would go here. For now we just confirm the fetch succeeded
+            if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                 DispatchQueue.main.async {
+                     // Check quota_snapshots -> premium_interactions
+                     if let snapshots = json["quota_snapshots"] as? [String: Any],
+                    let premium = snapshots["premium_interactions"] as? [String: Any] {
+                    
+                        var total: Int? = nil
+                        var remaining: Int? = nil
+
+                        if let e = premium["entitlement"] as? Int {
+                            total = e
+                        } else if let e = premium["entitlement"] as? Double {
+                            total = Int(e)
+                        } else if let e = premium["entitlement"] as? String {
+                            total = Int(e)
+                        }
+
+                        if let r = premium["remaining"] as? Int {
+                            remaining = r
+                        } else if let r = premium["quota_remaining"] as? Int {
+                            remaining = r
+                        } else if let r = premium["remaining"] as? Double {
+                            remaining = Int(r)
+                        } else if let r = premium["quota_remaining"] as? Double {
+                            remaining = Int(r)
+                        } else if let r = premium["remaining"] as? String {
+                            remaining = Int(r)
+                        } else if let r = premium["quota_remaining"] as? String {
+                            remaining = Int(r)
+                        }
+
+                        DispatchQueue.main.async {
+                            self.copilotTotal = total
+                            self.copilotRemaining = remaining
+                            if let t = total, let rem = remaining, t > 0 {
+                                // progress should count down: remaining/total
+                                self.usagePercentage = Double(rem) / Double(t)
+                            }
+                        }
+                     }
+                 }
             }
         }.resume()
     }

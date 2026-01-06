@@ -76,7 +76,9 @@ class MediaRemoteController: ObservableObject {
         if application "Spotify" is running then
             tell application "Spotify"
                 if player state is playing then
-                    return "Spotify|||" & name of current track & "|||" & artist of current track & "|||" & album of current track
+                    return "Spotify|||" & name of current track & "|||" & artist of current track & "|||" & album of current track & "|||playing"
+                else if player state is paused then
+                    return "Spotify|||" & name of current track & "|||" & artist of current track & "|||" & album of current track & "|||paused"
                 end if
             end tell
         end if
@@ -84,7 +86,9 @@ class MediaRemoteController: ObservableObject {
         if application "Music" is running then
             tell application "Music"
                 if player state is playing then
-                    return "Music|||" & name of current track & "|||" & artist of current track & "|||" & album of current track
+                     return "Music|||" & name of current track & "|||" & artist of current track & "|||" & album of current track & "|||playing"
+                else if player state is paused then
+                     return "Music|||" & name of current track & "|||" & artist of current track & "|||" & album of current track & "|||paused"
                 end if
             end tell
         end if
@@ -101,9 +105,10 @@ class MediaRemoteController: ObservableObject {
                 DispatchQueue.main.async {
                     if error == nil, let result = output.stringValue, result != "not_playing" {
                         let components = result.components(separatedBy: "|||")
-                        if components.count >= 4 {
+                        if components.count >= 5 {
                             let trackID = "\(components[1])-\(components[2])"
                             var currentArtwork = self.nowPlayingInfo?.artworkData
+                            let isPlaying = (components[4] == "playing")
                             
                             // Check if track changed to fetch new artwork
                             if trackID != self.lastTrackID {
@@ -122,7 +127,7 @@ class MediaRemoteController: ObservableObject {
                                 trackName: components[1],
                                 artistName: components[2],
                                 albumName: components[3],
-                                isPlaying: true,
+                                isPlaying: isPlaying,
                                 appName: components[0],
                                 artworkData: currentArtwork
                             )
@@ -144,6 +149,22 @@ class MediaRemoteController: ObservableObject {
                     }
                 }
             }
+        }
+    }
+    
+    func openMusicApp() {
+        guard let appName = nowPlayingInfo?.appName else { return }
+        
+        // Map common names to Bundle IDs or just open by name
+        let bundleID: String
+        switch appName {
+        case "Spotify": bundleID = "com.spotify.client"
+        case "Music": bundleID = "com.apple.Music"
+        default: return
+        }
+        
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            NSWorkspace.shared.open(url)
         }
     }
     

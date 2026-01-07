@@ -8,27 +8,35 @@
 import AppKit
 
 struct ImageLoader {
-    /// Load Copilot icon from bundle resources
+    /// Load Copilot icon from asset catalog (works in dev and packaged app)
     static func loadCopilotIcon(asTemplate: Bool = false) -> NSImage? {
-        // Load from resource bundle
-        if let resourcePath = Bundle.main.resourcePath {
-            let imagePath = "\(resourcePath)/DevNotch_DevNotch.bundle/Contents/Resources/copilot-32.png"
-            if let image = NSImage(contentsOfFile: imagePath) {
-                if asTemplate {
-                    image.isTemplate = true
-                }
-                return image
-            }
+        // Try multiple approaches to load the icon
+        var image: NSImage?
+
+        // 1. Try loading from SPM resource bundle (Bundle.module)
+        image = Bundle.module.image(forResource: NSImage.Name("CopilotIcon"))
+
+        // 2. Fallback: try NSImage(named:) which searches all bundles
+        if image == nil {
+            image = NSImage(named: "CopilotIcon")
         }
-        
-        // Fallback
-        if let image = Bundle.main.image(forResource: "copilot-32") {
-            if asTemplate {
-                image.isTemplate = true
-            }
-            return image
+
+        // 3. Fallback: try main bundle
+        if image == nil {
+            image = Bundle.main.image(forResource: "CopilotIcon")
         }
-        
-        return nil
+
+        // 4. Final fallback: try loading PNG directly
+        if image == nil {
+            image = Bundle.module.image(forResource: "copilot-32")
+        }
+
+        guard let finalImage = image else {
+            return nil
+        }
+
+        // Disable template mode to show original colors
+        finalImage.isTemplate = asTemplate
+        return finalImage
     }
 }

@@ -1,0 +1,24 @@
+{
+  "configurations": [
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:tauri-devnotch}/macos",
+      "name": "Debug DevNotch (macos)",
+      "target": "DevNotch",
+      "configuration": "debug",
+      "preLaunchTask": "swift: Build Debug DevNotch (macos)"
+    },
+    {
+      "type": "swift",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:tauri-devnotch}/macos",
+      "name": "Release DevNotch (macos)",
+      "target": "DevNotch",
+      "configuration": "release",
+      "preLaunchTask": "swift: Build Release DevNotch (macos)"
+    }
+  ]
+}

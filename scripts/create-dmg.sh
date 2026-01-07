@@ -22,6 +22,14 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 cp "$EXECUTABLE" "$APP_BUNDLE/Contents/MacOS/DevNotch"
 chmod +x "$APP_BUNDLE/Contents/MacOS/DevNotch"
 
+# Copy resource bundle (contains Assets.car with images)
+if [ -d "$BUILD_PATH/DevNotch_DevNotch.bundle" ]; then
+    cp -R "$BUILD_PATH/DevNotch_DevNotch.bundle" "$APP_BUNDLE/Contents/Resources/"
+    echo "✓ Copied resource bundle to app"
+else
+    echo "⚠️  Warning: DevNotch_DevNotch.bundle not found"
+fi
+
 # Copy Info.plist
 cp "$SOURCE_INFO_PLIST" "$APP_BUNDLE/Contents/Info.plist"
 

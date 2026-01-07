@@ -35,5 +35,7 @@
     </array>
     <key>CopilotClientID</key>
     <string>Iv1.b507a08c87ecfe98</string>
+    <key>NSKeychainUsageDescription</key>
+    <string>DevNotch needs access to securely store your GitHub authentication token for Copilot usage tracking.</string>
 </dict>
 </plist>

@@ -17,7 +17,8 @@ let package = Package(
             name: "DevNotch",
             path: "DevNotch",
             resources: [
-                .process("Assets.xcassets")
+                .process("Assets.xcassets"),
+                .process("copilot-32.png")
             ]
         )
     ]

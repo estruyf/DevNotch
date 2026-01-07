@@ -36,7 +36,7 @@ final class CopilotClient: ObservableObject {
             if let v = newValue { KeychainHelper.shared.saveToken(v) }
             else { KeychainHelper.shared.deleteToken() }
             DispatchQueue.main.async { [weak self] in
-                self?.isAuthenticated = (KeychainHelper.shared.getToken() != nil)
+                self?.checkAuthenticationStatus()
             }
         }
     }
@@ -48,12 +48,19 @@ final class CopilotClient: ObservableObject {
     }
 
     private init() {
-        self.isAuthenticated = (KeychainHelper.shared.getToken() != nil)
-        
-        // If already authenticated, fetch usage immediately on app startup
-        if self.isAuthenticated {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.fetchUsage()
+        // Don't check keychain on init - wait until user needs it
+        self.isAuthenticated = false
+    }
+    
+    /// Check authentication status by attempting to read from keychain
+    /// This will trigger the keychain permission prompt if needed
+    func checkAuthenticationStatus() {
+        let hasToken = KeychainHelper.shared.getToken() != nil
+        DispatchQueue.main.async { [weak self] in
+            self?.isAuthenticated = hasToken
+            // If authenticated, fetch usage
+            if hasToken {
+                self?.fetchUsage()
             }
         }
     }
@@ -193,6 +200,7 @@ final class CopilotClient: ObservableObject {
 
     func signOut() {
         token = nil
+        isAuthenticated = false
         usagePercentage = nil
         username = nil
         copilotRemaining = nil

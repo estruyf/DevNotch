@@ -39,7 +39,7 @@ struct CompactNowPlayingView: View {
                     .truncationMode(.tail)
             } else if controller.nowPlayingInfo != nil && !controller.nowPlayingInfo!.isPlaying {
                 // Music paused: show Copilot icon
-                if let iconImage = loadCopilotIcon() {
+                if let iconImage = ImageLoader.loadCopilotIcon() {
                     Image(nsImage: iconImage)
                         .resizable()
                         .scaledToFit()
@@ -87,24 +87,6 @@ struct CompactNowPlayingView: View {
         } else {
             return Color.red
         }
-    }
-    
-    // Load Copilot icon from bundle resources
-    private func loadCopilotIcon() -> NSImage? {
-        // Try multiple paths
-        let paths = [
-            "/Users/eliostruyf/Developer/nodejs/DevNotch/assets/32x32.png",
-            Bundle.main.resourcePath.map { "\($0)/32x32.png" },
-            Bundle.main.resourcePath.map { "\($0)/Assets.xcassets/CopilotIcon.imageset/copilot-32.png" }
-        ].compactMap { $0 }
-        
-        for path in paths {
-            if let image = NSImage(contentsOfFile: path) {
-                return image
-            }
-        }
-        
-        return nil
     }
 }
 

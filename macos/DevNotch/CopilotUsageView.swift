@@ -12,10 +12,16 @@ struct CopilotUsageView: View {
 
     @ObservedObject private var client = CopilotClient.shared
     @State private var isHovering = false
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
+            HStack(spacing: 6) {
+                if let icon = ImageLoader.loadCopilotIcon() {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 16, height: 16)
+                }
                 Text("GitHub Copilot Usage")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
@@ -62,7 +68,9 @@ struct CopilotUsageView: View {
         }
         .padding(.horizontal, 12)
         .onAppear {
-            if client.isAuthenticated { client.fetchUsage() }
+            // Check authentication status on first appearance
+            // This is when keychain access will be requested if needed
+            client.checkAuthenticationStatus()
         }
     }
 }

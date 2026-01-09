@@ -10,7 +10,7 @@ import SwiftUI
 struct CompactNowPlayingView: View {
     @ObservedObject private var controller = MediaRemoteController.shared
     @ObservedObject private var copilot = CopilotClient.shared
-    
+
     var body: some View {
         HStack(spacing: 8) {
             // Left side: artwork + track if playing, Copilot icon if paused
@@ -59,6 +59,34 @@ struct CompactNowPlayingView: View {
 
             Spacer()
 
+            // Pause/Play button when music info is available
+            if controller.nowPlayingInfo != nil {
+                Button(action: {
+                    if controller.nowPlayingInfo?.isPlaying == true {
+                        controller.pause()
+                    } else {
+                        controller.play()
+                    }
+                }) {
+                    Image(
+                        systemName: controller.nowPlayingInfo?.isPlaying == true
+                            ? "pause.fill" : "play.fill"
+                    )
+                    .font(.system(size: 10))
+                    .foregroundColor(.white.opacity(0.8))
+                    .frame(width: 16, height: 16)
+                }
+                .buttonStyle(PlainButtonStyle())
+                .contentShape(Rectangle())
+                .onHover { hovering in
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
+            }
+
             // If music is playing show waveform, if paused show usage dot
             if let info = controller.nowPlayingInfo, info.isPlaying {
                 let waveColor = waveformColor(for: copilot.usagePercentage)
@@ -75,7 +103,7 @@ struct CompactNowPlayingView: View {
         .padding(.horizontal, 12)
         .frame(maxHeight: .infinity)
     }
-    
+
     // Determine waveform color based on Copilot usage percentage
     private func waveformColor(for percentage: Double?) -> Color {
         guard let p = percentage else { return Color.orange }
@@ -93,7 +121,7 @@ struct CompactNowPlayingView: View {
 struct WaveformView: View {
     let color: Color
     @State private var phase: CGFloat = 0
-    
+
     var body: some View {
         HStack(spacing: 2) {
             ForEach(0..<4) { i in
@@ -112,7 +140,7 @@ struct WaveformView: View {
             phase = 1
         }
     }
-    
+
     func height(for index: Int) -> CGFloat {
         // Randomize or pattern based on phase
         // Since phase is just a trigger, we use the fact that invalidation happens?
